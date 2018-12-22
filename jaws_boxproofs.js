@@ -643,7 +643,7 @@ var BoxProofs = function(){
             );
         if(resStr !== ""){
             retval["__success"] = false;
-            retval["__res"] = resStr;
+            retval["__res"] = resStr[0];
             }
         else {
             retval[retI] = {t:"none",v:null,tt:"$",tv:null,posX:linepos.x - linepos.start,posY:linepos.lnr};
@@ -7428,52 +7428,12 @@ var BoxProofs = function(){
                 }
             }
         };
-    var mapSyms = function(sym){
-        switch(sym){
-            case "not":
-                return "&not;";
-            case "neg":
-                return "&not;";
-            case "and":
-                return "&and;";
-            case "con":
-                return "&and;"
-            case "or":
-                return "&or;";
-            case "dis":
-                return "&or;";
-            case "eq":
-                return "=";
-            case "imp":
-                return "&rarr;";
-            case "all":
-                return "&forall;";
-            case "exi":
-                return "&exist;";
-            case "top":
-                return "&#8868;";
-            case "bot":
-                return "&#8869;";
-            case "nn":
-                return "&not;&not;";
-            default:
-                return sym;
-            }
-        };
-    var mapName = function(v){
-        return v.replace(/\^([a-zA-Z@#0-9]+)|_([a-zA-Z@#0-9]+)|\\([a-zA-Z]+)/g,
-            function(x,a,b,c){
-                if(a !== undefined){
-                    return "<sup style='font-size:10pt;'>"+a+"</sup>";
-                    }
-                if(b !== undefined){
-                    return "<sub style='font-size:10pt;'>"+b+"</sub>";
-                    }
-                return "&"+c+";";
-                }
-            );
-        };
-    var writeTerm = function(term){
+    /* The non-parser part of the program begins here
+     * */
+
+    /* General write functions. To be used with both latex and html
+     * */
+    var writeTerm = function(mapName,mapSyms,term){
         if(term.name === "bot" || term.name === "top"){
             //might check args
             return mapSyms(term.name);
@@ -7486,7 +7446,7 @@ var BoxProofs = function(){
         for(var i = 0; i < term.args.length; i++){
             var arg = term.args[i];
             if(arg.type === "atom"){
-                args += writeTerm(arg) + ",";
+                args += writeTerm(mapName,mapSyms,arg) + ",";
                 continue;
                 }
             args += mapName(term.args[i].v) + ",";
@@ -7494,199 +7454,249 @@ var BoxProofs = function(){
         retval += "("+args.substr(0,args.length - 1)+")";
         return retval;
         };
-    var writeConnective = function(form){
+    var writeConnective = function(mapName,mapSyms,form){
         if(form.args.length === 2){
             return (
-                mapName(traverseFormula(form.args[0])) +
+                mapName(writeFormula(mapName,mapSyms)(form.args[0])) +
                 mapSyms(form.name) +
-                mapName(traverseFormula(form.args[1]))
+                mapName(writeFormula(mapName,mapSyms)(form.args[1]))
                 );
             }
-        return mapSyms(form.name) + traverseFormula(form.args[0]);
+        return mapSyms(form.name) + writeFormula(mapName,mapSyms)(form.args[0]);
         };
-    var writeQuant = function(form){
+    var writeQuant = function(mapName,mapSyms,form){
         var q = mapSyms(form.name);
         var bvar = form.bvar;
-        var arg = traverseFormula(form.args[0]);
+        var arg = writeFormula(mapName,mapSyms)(form.args[0]);
         return q + mapName(bvar) + ".(" + arg + ")";
         };
-    var traverseFormula = function(form){
-        var retval = "";
-        switch(form.type){
-            case "connective":
-                retval = writeConnective(form);
-                break;
-            case "quant":
-                retval = writeQuant(form);
-                break;
-            case "atom":
-                retval = writeTerm(form);
-                break;
-            case "par":
-                retval = "("+traverseFormula(form.args[0])+")";
-                break;
-            }
-        return retval;
-        };
-    var traverseRule = function(rule){
-        var name = function(){
-            if(rule.name === undefined){
-                return "no-name";
-                }
-            if(rule.name.length === 1){
-                return mapSyms(rule.name[0]);
-                }
-            if(rule.name.length === 2){
-                return mapSyms(rule.name[0]) + rule.name[1];
-                }
-            return mapSyms(rule.name[0])+rule.name[1]+"<sub style='font-size:10pt;'>"+rule.name[2]+"</sub>";
-            }();
-        var args = function(){
+    var writeFormula = function(mapName,mapSyms){
+        return function(form){
             var retval = "";
-            if(rule.name === undefined){
-                return rule.v;
-                }
-            if(rule.args === undefined){
-                return retval;
-                }
-            for(var i = 0; i < rule.args.length; i++){
-                var arg = rule.args[i];
-                var argV = traverseScope(traverse_bindings,arg.v);
-                if(argV === null){
-                    argV = mapName(arg.v);
-                }
-                retval += argV + " ";
+            switch(form.type){
+                case "connective":
+                    retval = writeConnective(mapName,mapSyms,form);
+                    break;
+                case "quant":
+                    retval = writeQuant(mapName,mapSyms,form);
+                    break;
+                case "atom":
+                    retval = writeTerm(mapName,mapSyms,form);
+                    break;
+                case "par":
+                    retval = "("+writeFormula(mapName,mapSyms)(form.args[0])+")";
+                    break;
                 }
             return retval;
-            }();
-        return name + " " + args;
-        };
-    var nyContainer = function(kode,c,indhold){
-        var nyKnap = function(navn,f){
-            var k = document.createElement("button");
-            k.style.border = "0px";
-            k.style.borderRight = "2px solid black";
-            k.style.backgroundColor = "#424242";
-            k.style.color = "#58FA58";
-            k.style.fontSize = "10pt";
-            k.innerHTML = navn;
-            k.onclick = f;
-            return k;
             };
-        var menu = document.createElement("span");
-        c.style.display = "block";
-        c.style.marginTop = "10px";
-        c.style.marginBottom = "10px";
-        menu.style.display = "block";
-        menu.style.borderTop = "2px solid #585858";
-        menu.style.borderBottom = "2px solid #585858";
-        menu.style.backgroundColor = "#1C1C1C";
-        menu.style.textAlign = "left";
-        menu.appendChild(nyKnap("copy to cb",function(){
-            var c = null;
-            return function(){
-                if(c === null){
-                    c = document.createElement("textarea");
-                    c.style.display = "none";
-                    c.style.position = "fixed";
-                    c.style.left = "-9999px";
-                    c.value = kode;
-                    document.body.appendChild(c);
-                    }
-                c.style.display = "block";
-                c.select();
-                document.execCommand("copy");
-                c.style.display = "none";
+        };
+    var html = {
+        mapSyms:function(v){
+            var map = {
+                "not":"&not;",
+                "neg":"&not;",
+                "and":"&and;",
+                "con":"&and;",
+                "or":"&or;",
+                "dis":"&or;",
+                "eq":"=",
+                "imp":"&rarr;",
+                "all":"&forall;",
+                "exi":"&exist;",
+                "top":"&#8868;",
+                "bot":"&#8869;",
+                "nn":"&not;&not;"
                 };
-            }()));
-        menu.appendChild(nyKnap("send to raw",function(){
-            var w = window.open("","Raw text of proof for use with https://boxprover.utr.dk/index.html");
-            w.document.body.style.whiteSpace = "pre";
-            w.document.body.style.fontFamily = "monospace";
-            w.document.body.innerHTML = kode;
-            }));
-        menu.appendChild(nyKnap("about",function(){
-            window.open("http://brkmnd.com/pages/projects/Default.aspx?id=29","_blank");
-            }));
-        c.appendChild(menu);
-        c.appendChild(indhold);
-        return c;
+            if(map[v] !== undefined){
+                return map[v];
+                }
+            return v;
+            },
+        mapName:function(v){
+            return v.replace(/\^([a-zA-Z@#0-9]+)|_([a-zA-Z@#0-9]+)|\\([a-zA-Z]+)/g,
+                function(x,a,b,c){
+                    if(a !== undefined){
+                        return "<sup style='font-size:10pt;'>"+a+"</sup>";
+                        }
+                    if(b !== undefined){
+                        return "<sub style='font-size:10pt;'>"+b+"</sub>";
+                        }
+                    return "&"+c+";";
+                    }
+                );
+            },
+        writeRule:function(rule){
+            var that = this;
+            var name = function(){
+                if(rule.name === undefined){
+                    return "no-name";
+                    }
+                if(rule.name.length === 1){
+                    return that.mapSyms(rule.name[0]);
+                    }
+                if(rule.name.length === 2){
+                    return that.mapSyms(rule.name[0]) + rule.name[1];
+                    }
+                return that.mapSyms(rule.name[0])+rule.name[1]+"<sub style='font-size:10pt;'>"+rule.name[2]+"</sub>";
+                }();
+            var args = function(){
+                var retval = "";
+                if(rule.name === undefined){
+                    return rule.v;
+                    }
+                if(rule.args === undefined){
+                    return retval;
+                    }
+                for(var i = 0; i < rule.args.length; i++){
+                    var arg = rule.args[i];
+                    var argV = traverseScope(traverse_bindings,arg.v);
+                    if(argV === null){
+                        argV = that.mapName(arg.v);
+                    }
+                    retval += argV + " ";
+                    }
+                return retval;
+                }();
+            return name + " " + args;
+            },
+        writeFormula:function(form){
+            return writeFormula(this.mapName,this.mapSyms)(form);
+            },
+        newContainer:function(kode,c,content){
+            var newButton = function(navn,f){
+                var k = document.createElement("button");
+                k.style.border = "0px";
+                k.style.borderRight = "2px solid black";
+                k.style.backgroundColor = "#424242";
+                k.style.color = "#58FA58";
+                k.style.fontSize = "10pt";
+                k.innerHTML = navn;
+                k.onclick = f;
+                return k;
+                };
+            var menu = document.createElement("span");
+            c.style.display = "block";
+            c.style.marginTop = "10px";
+            c.style.marginBottom = "10px";
+            menu.style.display = "block";
+            menu.style.borderTop = "2px solid #585858";
+            menu.style.borderBottom = "2px solid #585858";
+            menu.style.backgroundColor = "#1C1C1C";
+            menu.style.textAlign = "left";
+            menu.appendChild(newButton("copy to cb",function(){
+                var c = null;
+                return function(){
+                    if(c === null){
+                        c = document.createElement("textarea");
+                        c.style.display = "none";
+                        c.style.position = "fixed";
+                        c.style.left = "-9999px";
+                        c.value = kode;
+                        document.body.appendChild(c);
+                        }
+                    c.style.display = "block";
+                    c.select();
+                    document.execCommand("copy");
+                    c.style.display = "none";
+                    };
+                }()));
+            menu.appendChild(newButton("send to raw",function(){
+                var w = window.open("","Raw text of proof for use with https://boxprover.utr.dk/index.html");
+                w.document.body.style.whiteSpace = "pre";
+                w.document.body.style.fontFamily = "monospace";
+                w.document.body.innerHTML = kode;
+                }));
+            menu.appendChild(newButton("about",function(){
+                window.open("http://brkmnd.com/pages/projects/Default.aspx?id=29","_blank");
+                }));
+            c.appendChild(menu);
+            c.appendChild(content);
+            return c;
+            },
+        newBox:function(){
+            var k = document.createElement("span");
+            k.style.display = "block";
+            k.style.position = "relative";
+            k.style.marginTop = "3px";
+            k.style.marginBottom = "3px";
+            k.style.borderTop = "2px solid #585858";
+            k.style.borderBottom = "2px solid #585858";
+            k.style.borderRight = "2px solid #585858";
+            k.style.fontFamily = "cmodern_regular";
+            k.style.fontSize = "15pt";
+            k.style.backgroundColor = "#1C1C1C";
+            k.style.boxShadow = "3px 3px 5px black";
+            return k;
+            },
+        newError:function(kode,c,msg){
+            var k = this.newBox();
+            var ek = document.createElement("span");
+            ek.style.display = "block";
+            ek.style.margin = "20px";
+            ek.style.fontSize = "18pt";
+            ek.style.color = "red";
+            ek.style.textAlign = "center";
+            ek.innerHTML = msg;
+            k.appendChild(ek);
+            return this.newContainer(kode,c,k);
+            },
+        newLine2:function(c,lnrv,vv,hv){
+            var l = document.createElement("span");
+            var v = document.createElement("span");
+            var h = document.createElement("span");
+            var lnr = document.createElement("span");
+            l.innerHTML = "&nbsp;";
+            l.style.display = "block";
+            l.style.position = "relative";
+            l.style.height = "28px";
+            l.style.color = c;
+            lnr.style.position = "absolute";
+            lnr.style.top = "0px";
+            lnr.style.left = "2px";
+            lnr.style.color =  "#A4A4A4";
+            lnr.innerHTML = lnrv.toString() + ".";
+            v.style.position = "absolute";
+            v.style.left = "42px";
+            v.style.top = "0px";
+            v.style.textAlign = "left";
+            v.innerHTML = vv;
+            h.style.position = "absolute";
+            h.style.right = "2px";
+            h.style.top = "0px";
+            h.style.width = "250px";
+            h.style.textAlign = "left";
+            h.innerHTML = hv;
+            l.appendChild(lnr);
+            l.appendChild(v);
+            l.appendChild(h);
+            return l;
+            },
+        newLineGoal:function(tekst){
+            var l = document.createElement("span");
+            l.style.display = "block";
+            l.style.height = "28px";
+            l.style.color = "#F5A9A9";
+            l.style.textAlign = "center";
+            l.innerHTML = tekst;
+            return l;
+            },
+        newLine2Gray:function(lnr,vv,hv){
+            return this.newLine2("#BDBDBD",lnr,vv,hv);
+            },
+        newLine2White:function(lnr,vv,hv){
+            return this.newLine2("#FFFFFF",lnr,vv,hv);
+            }
         };
-    var nyKasse = function(){
-        var k = document.createElement("span");
-        k.style.display = "block";
-        k.style.position = "relative";
-        k.style.marginTop = "3px";
-        k.style.marginBottom = "3px";
-        k.style.borderTop = "2px solid #585858";
-        k.style.borderBottom = "2px solid #585858";
-        k.style.borderRight = "2px solid #585858";
-        k.style.fontFamily = "cmodern_regular";
-        k.style.fontSize = "15pt";
-        k.style.backgroundColor = "#1C1C1C";
-        k.style.boxShadow = "3px 3px 5px black";
-        return k;
-        };
-    var nyError = function(kode,c,msg){
-        var k = nyKasse();
-        var ek = document.createElement("span");
-        ek.style.display = "block";
-        ek.style.margin = "20px";
-        ek.style.fontSize = "18pt";
-        ek.style.color = "red";
-        ek.style.textAlign = "center";
-        ek.innerHTML = msg;
-        k.appendChild(ek);
-        return nyContainer(kode,c,k);
-        };
-    var nyLinje2 = function(c,lnrv,vv,hv){
-        var l = document.createElement("span");
-        var v = document.createElement("span");
-        var h = document.createElement("span");
-        var lnr = document.createElement("span");
-        l.innerHTML = "&nbsp;";
-        l.style.display = "block";
-        l.style.position = "relative";
-        l.style.height = "28px";
-        l.style.color = c;
-        lnr.style.position = "absolute";
-        lnr.style.top = "0px";
-        lnr.style.left = "2px";
-        lnr.style.color =  "#A4A4A4";
-        lnr.innerHTML = lnrv.toString() + ".";
-        v.style.position = "absolute";
-        v.style.left = "42px";
-        v.style.top = "0px";
-        v.style.textAlign = "left";
-        v.innerHTML = vv;
-        h.style.position = "absolute";
-        h.style.right = "2px";
-        h.style.top = "0px";
-        h.style.width = "250px";
-        h.style.textAlign = "left";
-        h.innerHTML = hv;
-        l.appendChild(lnr);
-        l.appendChild(v);
-        l.appendChild(h);
-        return l;
-        };
-    var nyLinjeGoal = function(tekst){
-        var l = document.createElement("span");
-        l.style.display = "block";
-        l.style.height = "28px";
-        l.style.color = "#F5A9A9";
-        l.style.textAlign = "center";
-        l.innerHTML = tekst;
-        return l;
-        };
-    var nyLinje2Graa = function(lnr,vv,hv){
-        return nyLinje2("#BDBDBD",lnr,vv,hv);
-        };
-    var nyLinje2Hvid = function(lnr,vv,hv){
-        return nyLinje2("#FFFFFF",lnr,vv,hv);
-        };
+    /* Latex part
+     * */
+    var latex = {};
+    /* General traversing
+     * */
+    //global state/side effect targets
+    //makes use of hoisting
     var traverse_lnr = 1;
     var traverse_bindings = {};
+    //traverse functions
     var traverseScope = function(s,n){
         if(s[n] !== undefined){
             return s[n];
@@ -7696,14 +7706,14 @@ var BoxProofs = function(){
             }
         return null;
         };
-    var traverseLines = function(bvar,goal,lines){
-        var retval = nyKasse();
+    var traverseLines = function(obj,bvar,goal,lines){
+        var retval = obj.newBox();
         if(bvar !== ""){
-            retval.appendChild(nyLinje2Graa(traverse_lnr,mapName(bvar),"variable"));
+            retval.appendChild(obj.newLine2Gray(traverse_lnr,obj.mapName(bvar),"variable"));
             traverse_lnr++;
         }
         if(traverse_lnr === 1){
-            goal.elm = nyLinjeGoal("");
+            goal.elm = obj.newLineGoal("");
             retval.appendChild(goal.elm);
         }
         for(var i = lines.length - 1; i >= 0; i--){
@@ -7713,13 +7723,13 @@ var BoxProofs = function(){
                 var s0 = {"..":traverse_bindings};
                 traverse_bindings[nameStr] = traverse_lnr.toString();
                 traverse_bindings = s0;
-                retval.appendChild(traverseLines(line.bvar,goal,line.lines));
+                retval.appendChild(traverseLines(obj,line.bvar,goal,line.lines));
                 traverse_bindings = traverse_bindings[".."];
                 traverse_bindings[nameStr] += "-" + (traverse_lnr - 1).toString();
                 continue;
                 }
-            var formStr = traverseFormula(line.formula);
-            var ruleStr = traverseRule(line.rule);
+            var formStr = obj.writeFormula(line.formula);
+            var ruleStr = obj.writeRule(line.rule);
             if(nameStr !== " "){
                 traverse_bindings[nameStr] = traverse_lnr.toString();
                 }
@@ -7727,13 +7737,13 @@ var BoxProofs = function(){
                 goal.prems.push(formStr);
             }
             goal.conc = formStr;
-            retval.appendChild(nyLinje2Hvid(traverse_lnr,formStr,ruleStr));
+            retval.appendChild(obj.newLine2White(traverse_lnr,formStr,ruleStr));
             traverse_lnr++;
             }
         return retval;
         };
     return {
-        lavKasse:function(c,ind){
+        createBoxHtml:function(c,ind){
             var c = c || document.createElement("span");
             var goal = {prems:[],conc:"",elm:null};
             var ind = ind.replace(/&gt;|&lt;/g,function(x){
@@ -7745,11 +7755,11 @@ var BoxProofs = function(){
             var tokens = lexer(ind);
             var absyn = parser(tokens);
             if(absyn.error){
-                return nyError(ind,c,absyn.error_msg);
+                return html.newError(ind,c,absyn.error_msg);
                 }
             traverse_lnr = 1;
             traverse_bindings = {};
-            nyContainer(ind,c,traverseLines("",goal,absyn.lines.lines));
+            html.newContainer(ind,c,traverseLines(html,"",goal,absyn.lines.lines));
             for(var i = 0; i < goal.prems.length; i++){
                 var prem = goal.prems[i];
                 goal.elm.innerHTML += prem + " , ";
@@ -7760,15 +7770,15 @@ var BoxProofs = function(){
                 }
             goal.elm.innerHTML += " &#8870; " + goal.conc;
             },
-        lavBevisBokse:function(bokse){
-            var lavKasse = this.lavKasse;
-            for(var i = 0; i < bokse.length; i++){
-                var boks = bokse[i];
-                var tekst = boks.innerHTML;
+        createBoxesHtml:function(boxes){
+            var createBox = this.createBoxHtml;
+            for(var i = 0; i < boxes.length; i++){
+                var box = boxes[i];
+                var text = box.innerHTML;
 
-                boks.style.display = "block";
-                boks.innerHTML = "";
-                lavKasse(boks,tekst);
+                box.style.display = "block";
+                box.innerHTML = "";
+                createBox(box,text);
                 }
             }
         }
