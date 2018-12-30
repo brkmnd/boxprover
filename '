@@ -7443,8 +7443,7 @@ var BoxProofs = function(){
             return retval;
             }
         var args = "";
-        //turn around to match correct order of args
-        for(var i = term.args.length - 1; i >= 0; i--){
+        for(var i = 0; i < term.args.length; i++){
             var arg = term.args[i];
             if(arg.type === "atom"){
                 args += writeTerm(mapName,mapSyms,arg) + ",";
@@ -7743,11 +7742,12 @@ var BoxProofs = function(){
                     if(argV === null){
                         argV = that.mapName(arg.v);
                     }
-                    retval += argV+" ";
+                    retval += argV + " ";
                     }
                 return retval;
                 }();
-            return name+" "+args;
+            alert(args)
+            return name + " " + args;
             },
         writeFormula:function(form){
             return writeFormula(this.mapName,this.mapSyms)(form);
@@ -7779,7 +7779,7 @@ var BoxProofs = function(){
         newLine2:function(c,lnrv,leftV,rightV){
             var retval = {};
             //treat leftV as formula, that is $leftV$
-            var cont = leftV + " & " + rightV + "\\\\";
+            var cont = "$"+leftV + "$ & " + rightV + "\\\\";
             retval.toString = function(){
                 return cont;
                 };
