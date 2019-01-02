@@ -7570,7 +7570,7 @@ var BoxProofs = function(){
                 k.style.borderRight = "2px solid black";
                 k.style.backgroundColor = "#424242";
                 k.style.color = "#58FA58";
-                k.style.fontSize = "10pt";
+                k.style.fontSize = "11pt";
                 k.innerHTML = navn;
                 k.onclick = f;
                 return k;
@@ -7607,6 +7607,13 @@ var BoxProofs = function(){
                 w.document.body.style.fontFamily = "monospace";
                 w.document.body.innerHTML = kode;
                 }));
+            menu.appendChild(newButton("send to latex",function(){
+                var w = window.open("","Latex code to use with boxproof.sty");
+                var lcode = pub.createBoxLatex(w,kode);
+                w.document.body.style.whiteSpace = "pre";
+                w.document.body.style.fontFamily = "monospace";
+                w.document.body.innerHTML = lcode;
+                }));
             menu.appendChild(newButton("about",function(){
                 window.open("http://brkmnd.com/pages/projects/Default.aspx?id=29","_blank");
                 }));
@@ -7614,7 +7621,7 @@ var BoxProofs = function(){
             c.appendChild(content);
             return c;
             },
-        newBox:function(lnr){
+        newBox:function(boxvar,lnr){
             var k = document.createElement("span");
             k.style.display = "block";
             k.style.position = "relative";
@@ -7627,6 +7634,9 @@ var BoxProofs = function(){
             k.style.fontSize = "15pt";
             k.style.backgroundColor = "#1C1C1C";
             k.style.boxShadow = "3px 3px 5px black";
+            if(boxvar !== ""){
+                k.appendChild(this.newLineVar(this.mapName(boxvar)));
+                }
             return k;
             },
         newError:function(kode,c,msg){
@@ -7681,6 +7691,17 @@ var BoxProofs = function(){
             l.innerHTML = tekst;
             return l;
             },
+        newLineVar:function(v){
+            var l = document.createElement("span");
+            l.style.display = "block";
+            l.style.position = "relative";
+            l.style.height = "28px";
+            l.style.color = "#BDBDBD";
+            l.style.textAlign = "left";
+            l.style.marginLeft = "25px";
+            l.innerHTML = v;
+            return l;
+            },
         newLine2Gray:function(lnr,vv,hv){
             return this.newLine2("#BDBDBD",lnr,vv,hv);
             },
@@ -7717,6 +7738,12 @@ var BoxProofs = function(){
             },
         writeRule:function(rule){
             var that = this;
+            var mapRule = function(r){
+                if(r === "i"){
+                    return "\\intro";
+                    }
+                return "\\elim";
+                };
             var name = function(){
                 if(rule.name === undefined){
                     return "no-name";
@@ -7725,7 +7752,7 @@ var BoxProofs = function(){
                     return that.mapSyms(rule.name[0]);
                     }
                 if(rule.name.length === 2){
-                    return that.mapSyms(rule.name[0]) + rule.name[1];
+                    return mapRule(rule.name[1]) + that.mapSyms(rule.name[0]);
                     }
                 return that.mapSyms(rule.name[0])+rule.name[1]+" "+rule.name[2];
                 }();
@@ -7755,17 +7782,24 @@ var BoxProofs = function(){
         newContainer:function(code,c,content){
             return c;
             },
-        newBox:function(lnr){
+        newBox:function(boxvar,lnr){
             var retval = {};
             var cont = "";
             retval.toString = function(){
                 if(lnr === 1){
-                    return "\\begin{logicproof}{2}\n"+cont+"\\end{logicproof}";
+                    return "\\begin{proofbox}\n"+cont+"\\end{proofbox}";
                     }
-                return "\\begin{subproof}\n"+cont+"\\end{subproof}";
+                if(boxvar !== null && boxvar !== ""){
+                    cont = boxvar + cont;
+                    boxvar = null;
+                    }
+                return "\\(\n"+cont+"\\)";
                 };
             retval.appendChild = function(c){
-                cont += c.toString() + "\n";
+                var str = c.toString();
+                if(str !== ""){
+                    cont += str + "\n";
+                    }
                 };
             return retval;
             },
@@ -7777,9 +7811,9 @@ var BoxProofs = function(){
             return retval;
             },
         newLine2:function(c,lnrv,leftV,rightV){
-            var retval = {};
+            var retval = {type:"line"};
             //treat leftV as formula, that is $leftV$
-            var cont = leftV + " & " + rightV + "\\\\";
+            var cont = "\\:" + leftV + "\\=" + rightV + "\\\\";
             retval.toString = function(){
                 return cont;
                 };
@@ -7787,10 +7821,10 @@ var BoxProofs = function(){
             },
         newLineGoal:function(tekst){
             var retval = {};
+            retval.toString = function(){
+                return "";
+                };
             return retval;
-            },
-        newLine2Gray:function(lnr,vv,hv){
-            return this.newLine2("#BDBDBD",lnr,vv,hv);
             },
         newLine2White:function(lnr,vv,hv){
             return this.newLine2("#FFFFFF",lnr,vv,hv);
@@ -7813,11 +7847,13 @@ var BoxProofs = function(){
         return null;
         };
     var traverseLines = function(obj,bvar,goal,lines){
-        var retval = obj.newBox(traverse_lnr);
+        var retval = obj.newBox(bvar,traverse_lnr);
+        /*
         if(bvar !== ""){
             retval.appendChild(obj.newLine2Gray(traverse_lnr,obj.mapName(bvar),"variable"));
             traverse_lnr++;
         }
+        */
         if(traverse_lnr === 1){
             goal.elm = obj.newLineGoal("");
             retval.appendChild(goal.elm);
@@ -7848,61 +7884,61 @@ var BoxProofs = function(){
             }
         return retval;
         };
-    return {
-        createBoxHtml:function(c,ind){
-            var c = c || document.createElement("span");
-            var goal = {prems:[],conc:"",elm:null};
-            var ind = ind.replace(/&gt;|&lt;/g,function(x){
-                if(x === "&gt;"){
-                    return ">";
-                    }
-                return "<";
-                });
-            var tokens = lexer(ind);
-            var absyn = parser(tokens);
-            if(absyn.error){
-                return html.newError(ind,c,absyn.error_msg);
+    var pub = {};
+    pub.createBoxHtml = function(c,ind){
+        var c = c || document.createElement("span");
+        var goal = {prems:[],conc:"",elm:null};
+        var ind = ind.replace(/&gt;|&lt;/g,function(x){
+            if(x === "&gt;"){
+                return ">";
                 }
-            traverse_lnr = 1;
-            traverse_bindings = {};
-            html.newContainer(ind,c,traverseLines(html,"",goal,absyn.lines.lines));
-            for(var i = 0; i < goal.prems.length; i++){
-                var prem = goal.prems[i];
-                goal.elm.innerHTML += prem + " , ";
-                }
-            if(goal.elm.innerHTML !== ""){
-                var str = goal.elm.innerHTML;
-                goal.elm.innerHTML = str.substr(0,str.length - 2);
-                }
-            goal.elm.innerHTML += " &#8870; " + goal.conc;
-            },
-        createBoxLatex(c,ind){
-            var goal = {prems:[],conc:"",elm:null};
-            var ind = ind.replace(/&gt;|&lt;/g,function(x){
-                if(x === "&gt;"){
-                    return ">";
-                    }
-                return "<";
-                });
-            var tokens = lexer(ind);
-            var absyn = parser(tokens);
-            if(absyn.error){
-                return latex.newError(ind,c,absyn.error_msg);
-                }
-            traverse_lnr = 1;
-            traverse_bindings = {};
-            return traverseLines(latex,"",goal,absyn.lines.lines).toString();
-            },
-        createBoxesHtml:function(boxes){
-            var createBox = this.createBoxHtml;
-            for(var i = 0; i < boxes.length; i++){
-                var box = boxes[i];
-                var text = box.innerHTML;
-
-                box.style.display = "block";
-                box.innerHTML = "";
-                createBox(box,text);
-                }
+            return "<";
+            });
+        var tokens = lexer(ind);
+        var absyn = parser(tokens);
+        if(absyn.error){
+            return html.newError(ind,c,absyn.error_msg);
             }
-        }
+        traverse_lnr = 1;
+        traverse_bindings = {};
+        html.newContainer(ind,c,traverseLines(html,"",goal,absyn.lines.lines));
+        for(var i = 0; i < goal.prems.length; i++){
+            var prem = goal.prems[i];
+            goal.elm.innerHTML += prem + " , ";
+            }
+        if(goal.elm.innerHTML !== ""){
+            var str = goal.elm.innerHTML;
+            goal.elm.innerHTML = str.substr(0,str.length - 2);
+            }
+        goal.elm.innerHTML += " &#8870; " + goal.conc;
+        };
+    pub.createBoxesHtml = function(boxes){
+        var createBox = this.createBoxHtml;
+        for(var i = 0; i < boxes.length; i++){
+            var box = boxes[i];
+            var text = box.innerHTML;
+
+            box.style.display = "block";
+            box.innerHTML = "";
+            createBox(box,text);
+            }
+        };
+    pub.createBoxLatex = function(c,ind){
+        var goal = {prems:[],conc:"",elm:null};
+        var ind = ind.replace(/&gt;|&lt;/g,function(x){
+            if(x === "&gt;"){
+                return ">";
+                }
+            return "<";
+            });
+        var tokens = lexer(ind);
+        var absyn = parser(tokens);
+        if(absyn.error){
+            return latex.newError(ind,c,absyn.error_msg);
+            }
+        traverse_lnr = 1;
+        traverse_bindings = {};
+        return traverseLines(latex,"",goal,absyn.lines.lines).toString();
+        };
+    return pub;
     };
