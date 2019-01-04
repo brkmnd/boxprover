@@ -298,28 +298,28 @@ var BoxProofs = function(){
         44:function(tree){
             var arg3 = tree.pop();
             var arg2 = tree.pop();
-            tree.push({type:"connective",name:"eq",args:[arg2,arg2]});
+            tree.push({type:"connective",name:"eq",args:[arg2,arg3]});
             return tree;
             },
         //[45] Formula -> Formula imp Formula 
         45:function(tree){
             var arg3 = tree.pop();
             var arg2 = tree.pop();
-            tree.push({type:"connective",name:"imp",args:[arg2,arg2]});
+            tree.push({type:"connective",name:"imp",args:[arg2,arg3]});
             return tree;
             },
         //[46] Formula -> Formula or Formula 
         46:function(tree){
             var arg3 = tree.pop();
             var arg2 = tree.pop();
-            tree.push({type:"connective",name:"or",args:[arg2,arg2]});
+            tree.push({type:"connective",name:"or",args:[arg2,arg3]});
             return tree;
             },
         //[47] Formula -> Formula and Formula 
         47:function(tree){
             var arg3 = tree.pop();
             var arg2 = tree.pop();
-            tree.push({type:"connective",name:"and",args:[arg2,arg2]});
+            tree.push({type:"connective",name:"and",args:[arg2,arg3]});
             return tree;
             },
         //[48] Bind -> lpar Naming Formula rpar 
