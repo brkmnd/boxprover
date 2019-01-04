@@ -41,6 +41,12 @@ var BoxProofs = function(){
             "name":function(tokenType,tokenVal){
                 var n = tokenVal;
                 if(n[0] === '"'){
+                    n = n.replace(/<|>/g,function(x){
+                        if(x === "<"){
+                            return "&lt;";
+                            }
+                        return "&gt;";
+                    });
                     n = n.substr(1);
                     n = n.substr(0,n.length - 1);
                     }
@@ -188,7 +194,7 @@ var BoxProofs = function(){
         22:function(tree){
             var arg3 = tree.pop();
             var arg2 = tree.pop();
-            tree.push({type:"rule",name:["mt"],args:[arg2,arg2]});
+            tree.push({type:"rule",name:["mt"],args:[arg2,arg3]});
             return tree; },
         //[23] RuleApply -> pbc name 
         23:function(tree){
@@ -218,7 +224,7 @@ var BoxProofs = function(){
         28:function(tree){
             var arg3 = tree.pop();
             var arg2 = tree.pop();
-            tree.push({type:"rule",name:["neg","e"],args:[arg2,arg2]});
+            tree.push({type:"rule",name:["neg","e"],args:[arg2,arg3]});
             return tree; },
         //[29] RuleApply -> neg_i name 
         29:function(tree){
@@ -229,7 +235,7 @@ var BoxProofs = function(){
         30:function(tree){
             var arg3 = tree.pop();
             var arg2 = tree.pop();
-            tree.push({type:"rule",name:["imp","e"],args:[arg2,arg2]});
+            tree.push({type:"rule",name:["imp","e"],args:[arg2,arg3]});
             return tree; },
         //[31] RuleApply -> imp_i name 
         31:function(tree){
@@ -241,7 +247,7 @@ var BoxProofs = function(){
             var arg4 = tree.pop();
             var arg3 = tree.pop();
             var arg2 = tree.pop();
-            tree.push({type:"rule",name:["dis","e"],args:[arg2,arg2,arg3]});
+            tree.push({type:"rule",name:["dis","e"],args:[arg2,arg3,arg4]});
             return tree; },
         //[33] RuleApply -> dis_i2 name 
         33:function(tree){
@@ -267,7 +273,7 @@ var BoxProofs = function(){
         37:function(tree){
             var arg3 = tree.pop();
             var arg2 = tree.pop();
-            tree.push({type:"rule",name:["and","i"],args:[arg2,arg2]});
+            tree.push({type:"rule",name:["and","i"],args:[arg2,arg3]});
             return tree; },
         //[38] RuleApply -> top_i 
         38:function(tree){
