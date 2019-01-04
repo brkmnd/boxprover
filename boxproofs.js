@@ -7881,7 +7881,7 @@ var BoxProofs = function(){
             return name+"\\ "+args;
             },
         writeFormula:function(form){
-            return writeFormula(this.mapName,this.mapSyms)(form);
+            return writeFormula(function(x){return x + " ";},this.mapSyms)(form);
             },
         newContainer:function(code,c,content){
             return c;
