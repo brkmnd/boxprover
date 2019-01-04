@@ -8,7 +8,7 @@ prec "or" 2
 prec "imp" 1
 assoc "left"  : "and","or","not","eq"
 assoc "right" : "imp"
-token  "and","or","imp","not","eq" as "/\\\\","\\\\/","=>","~","=="
+token  "and","or","imp","not","eq" as "/\\\\","\\\\/","=>|->","~","==|="
 token "prem","assump" as "premise;","assumption;"
 token 
     "all_e","all_i","bot_e","con_e1","con_e2","con_i","dis_e",
@@ -23,12 +23,13 @@ token
 
 token "lpar","rpar","lbracket","rbracket" as "(",")","\\[","\\]"
 token "uscore","scolon","dot" as "_",";","."
-token -cap "name" as "[a-zA-Z0-9@#\\-_'\\^]+"
+token -cap "name" as "[a-zA-Z0-9@#\\-_'\\^]+|q[^q]*q"
 !token "\n","\r","\t"," "
 
 prod Lines      -> Line LinesOptEnd
 prod LinesOptEnd-> "scolon" Naming Lines
                  | Naming Lines
+                 | Lines
                  | "dot"
                  |
 prod Line       -> Formula Rule
