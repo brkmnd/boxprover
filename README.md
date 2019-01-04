@@ -1,4 +1,4 @@
-#boxprover
+# boxprover
 This is a grammar and a parser, that targets JS for now, for https://boxprover.utr.dk/index.html
 
 Usage:
