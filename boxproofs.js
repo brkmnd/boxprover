@@ -7858,7 +7858,7 @@ var BoxProofs = function(){
                 if(rule.name.length === 2){
                     return mapRule(rule.name[1]) + that.mapSyms(rule.name[0]);
                     }
-                return that.mapSyms(rule.name[0])+rule.name[1]+"\\ "+rule.name[2];
+                return mapRule(rule.name[1])+that.mapSyms(rule.name[0])+"_"+rule.name[2];
                 }();
             var args = function(){
                 var retval = "";
